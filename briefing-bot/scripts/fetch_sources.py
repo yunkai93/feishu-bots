@@ -196,10 +196,74 @@ def quality_score(item: dict, preferred_entities: list[str]) -> float:
     entity_hits = sum(1 for name in preferred_entities if name.lower() in text)
     design_bonus = 0.0
     if item.get("category") == "design":
-        if any(key in text for key in ["figma", "canva", "design", "workflow", "interface", "brand", "ui", "ux"]):
-            design_bonus = 12.0
+        if any(
+            key in text
+            for key in [
+                "figma",
+                "canva",
+                "claude design",
+                "gpt image 2",
+                "photoshop",
+                "firefly",
+                "midjourney",
+                "runway",
+                "lovart",
+                "即梦",
+                "可灵",
+                "seedance",
+                "设计",
+                "工作流",
+                "原型",
+                "修图",
+                "生图",
+                "海报",
+                "logo",
+                "banner",
+                "ppt",
+                "界面",
+                "ui",
+                "ux",
+            ]
+        ):
+            design_bonus += 12.0
+        if any(
+            key in text
+            for key in [
+                "中文",
+                "优设",
+                "uisdc",
+                "教程",
+                "案例",
+                "实操",
+                "拆解",
+                "技巧",
+                "提示词",
+                "交付",
+                "工作流",
+            ]
+        ):
+            design_bonus += 18.0
+        if item.get("source_name") in {"UISDC AIGC", "UISDC AI头条", "UISDC 首页精选"}:
+            design_bonus += 14.0
+        if item.get("source_name") in {"AI in Design", "TOOOLS"}:
+            design_bonus -= 6.0
         if any(key in text for key in ["best ai art generators", "signed away all of our ideas", "designers have"]):
             design_bonus -= 18.0
+        if any(
+            key in text
+            for key in [
+                "课程",
+                "训练营",
+                "财报",
+                "融资",
+                "招聘",
+                "conference",
+                "podcast",
+                "伦理",
+                "copyright settlement",
+            ]
+        ):
+            design_bonus -= 14.0
     agent_bonus = 0.0
     if item.get("category") == "agent":
         if any(key in text for key in ["agent", "codex", "claude code", "cursor", "mcp", "notion", "browser", "computer use"]):
@@ -244,6 +308,8 @@ def quality_score(item: dict, preferred_entities: list[str]) -> float:
         ]
     ):
         noise_penalty -= 12.0
+    if item.get("category") == "design" and item.get("source_name") in {"UISDC AIGC", "UISDC AI头条"}:
+        noise_penalty += 6.0
     summary_bonus = min(len(item.get("summary", "")) / 40.0, 8.0)
     tier_bonus = {
         "daily_brief": 12.0,
@@ -626,6 +692,73 @@ def fetch_html_json(source: dict, hours: int) -> list[dict]:
 
 def fetch_html_card(source: dict, hours: int) -> list[dict]:
     text = fetch_text(source["url"])
+    if source["id"] == "uisdc_aigc_tag":
+        card_pat = re.compile(
+            r'<div class="category-list-item[^"]*?item-wrap">.*?<h2 class="item-title">\s*<a title="([^"]+)" href="([^"]+)"[^>]*>.*?</a>.*?<i class="meta-time">\s*([^<]+)\s*</i>.*?<a class="tag[^"]*" title="([^"]+)"',
+            re.S,
+        )
+        items: list[dict] = []
+        freshness_hours = int(source.get("freshness_hours", hours))
+        max_items = int(source.get("max_items", 6))
+        for title, href, rel_time, tag in card_pat.findall(text):
+            published_at = parse_relative_cn(rel_time.strip()) or parse_dt(rel_time.strip())
+            if not within_window(published_at, freshness_hours):
+                continue
+            enriched = enrich_item(
+                source,
+                {
+                    "source_id": source["id"],
+                    "source_name": source["name"],
+                    "category": source["category"],
+                    "title": title,
+                    "url": href,
+                    "published_at": published_at or rel_time.strip(),
+                    "summary": clean_text(tag)[:120],
+                    "tags": [clean_text(tag)],
+                },
+            )
+            if enriched:
+                items.append(enriched)
+            if len(items) >= max_items:
+                break
+        return items
+
+    if source["id"] == "uisdc_aigc365":
+        day_pat = re.compile(
+            r'<h5 class="i-date">([^<]+)</h5><div class="i-items">(.*?)</div></div></div>',
+            re.S,
+        )
+        item_pat = re.compile(
+            r'<a class="i-item" href="([^"]+)"[^>]*>.*?<h2 class="i-title">([^<]+)</h2>.*?<div class="i-tag[^"]*">([^<]+)</div>',
+            re.S,
+        )
+        items: list[dict] = []
+        freshness_hours = int(source.get("freshness_hours", hours))
+        max_items = int(source.get("max_items", 6))
+        for date_text, block in day_pat.findall(text):
+            published_at = parse_dt(date_text.strip())
+            if not within_window(published_at, freshness_hours):
+                continue
+            for href, title, tag in item_pat.findall(block):
+                enriched = enrich_item(
+                    source,
+                    {
+                        "source_id": source["id"],
+                        "source_name": source["name"],
+                        "category": source["category"],
+                        "title": clean_text(title),
+                        "url": href,
+                        "published_at": published_at or date_text.strip(),
+                        "summary": clean_text(tag)[:120],
+                        "tags": [clean_text(tag)],
+                    },
+                )
+                if enriched:
+                    items.append(enriched)
+                if len(items) >= max_items:
+                    return items
+        return items
+
     pat = re.compile(
         r'<h2 class="item-title"><a title="([^"]+)" href="([^"]+)"[^>]*>([^<]+)</a></h2>.*?<span>([^<]{10,220})</span>.*?<span class="meta-time">([^<]+)</span>',
         re.S,
@@ -689,6 +822,64 @@ def fetch_html_feed(source: dict, hours: int) -> list[dict]:
     return items
 
 
+def fetch_uisdc_news(source: dict, hours: int) -> list[dict]:
+    text = fetch_text(source["url"])
+    match = re.search(r'var\s+uisdc_news\s*=\s*"((?:\\.|[^"])*)";', text, re.S)
+    if not match:
+        return []
+    try:
+        payload = json.loads(f'"{match.group(1)}"')
+        blocks = json.loads(payload)
+    except Exception:
+        return []
+    dump_json(
+        STATE_DIR / "uisdc_news_raw.json",
+        {
+            "fetched_at": now_cst().isoformat(),
+            "source": source["url"],
+            "blocks": blocks,
+        },
+    )
+
+    items: list[dict] = []
+    freshness_hours = int(source.get("freshness_hours", hours))
+    max_items = int(source.get("max_items", 4))
+    for block in blocks:
+        published_at = None
+        try:
+            published_at = datetime.fromtimestamp(int(block.get("time", 0)), tz=timezone(timedelta(hours=8))).isoformat()
+        except Exception:
+            published_at = None
+        if not within_window(published_at, freshness_hours):
+            continue
+        for item in block.get("dubao", []):
+            title = clean_text(item.get("title", ""))
+            summary = clean_text(item.get("content", ""))
+            image = clean_text((item.get("images") or "").split("|")[0])
+            if not title:
+                continue
+            enriched = enrich_item(
+                source,
+                {
+                    "source_id": source["id"],
+                    "source_name": source["name"],
+                    "category": source["category"],
+                    "title": title,
+                    "url": item.get("url") or source["url"],
+                    "published_at": published_at,
+                    "summary": summary[:320],
+                    "tags": [clean_text(item.get("title", ""))],
+                    "origin_site": "优设读报",
+                    "image": image,
+                },
+            )
+            if enriched:
+                items.append(enriched)
+            if len(items) >= max_items:
+                return items
+    return items
+
+
 def fetch_source(source: dict, hours: int) -> dict:
     try:
         kind = source["type"]
@@ -702,6 +893,8 @@ def fetch_source(source: dict, hours: int) -> dict:
             items = fetch_html_card(source, hours)
         elif kind == "html_feed":
             items = fetch_html_feed(source, hours)
+        elif kind == "uisdc_news":
+            items = fetch_uisdc_news(source, hours)
         else:
             raise ValueError(f"unsupported source type: {kind}")
         return {"source": source["name"], "ok": True, "count": len(items), "items": items}

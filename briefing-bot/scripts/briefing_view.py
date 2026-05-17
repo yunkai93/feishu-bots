@@ -57,10 +57,10 @@ def compact_digest(brief: dict | None = None) -> str:
         "",
     ]
     section_map = [
-        ("Agent Watch", data.get("agent_watch", []), 3),
-        ("Model Watch", data.get("model_watch", []), 2),
-        ("Design x AI", data.get("design_ai", []), 2),
-        ("快速雷达", data.get("quick_radar", []), 2),
+        ("智能体动态", data.get("agent_watch", []), 5),
+        ("模型动态", data.get("model_watch", []), 4),
+        ("设计师工作流", data.get("design_ai", []), 5),
+        ("快速雷达", data.get("quick_radar", []), 4),
     ]
     for title, entries, limit in section_map:
         if not entries:
@@ -74,7 +74,7 @@ def compact_digest(brief: dict | None = None) -> str:
     follow_up = data.get("follow_up", [])
     if follow_up:
         lines.append("[值得跟进]")
-        for item in follow_up[:2]:
+        for item in follow_up[:4]:
             lines.append(f"- {item}")
         lines.append("")
     sources = data.get("sources_used", [])
@@ -110,10 +110,10 @@ def status_text(brief: dict | None = None, chat_id: str = "") -> str:
     parts = [
         f"日期：{latest_date(data)}",
         f"更新时间：{data.get('updated_at', '未知')}",
-        f"Agent 条数：{len(data.get('agent_watch', []))}",
-        f"Model 条数：{len(data.get('model_watch', []))}",
-        f"Design 条数：{len(data.get('design_ai', []))}",
-        f"Radar 条数：{len(data.get('quick_radar', []))}",
+        f"智能体条数：{len(data.get('agent_watch', []))}",
+        f"模型条数：{len(data.get('model_watch', []))}",
+        f"设计条数：{len(data.get('design_ai', []))}",
+        f"雷达条数：{len(data.get('quick_radar', []))}",
         f"群ID：{'已记录' if chat_id else '未记录'}",
     ]
     return "\n".join(parts)
@@ -153,7 +153,7 @@ def build_brief_card(brief: dict | None = None) -> dict:
     elements: list[dict] = [
         {
             "tag": "markdown",
-            "content": f"<font color='grey'>每日 AI / Agent / 设计协作资讯</font>",
+            "content": f"<font color='grey'>每日 AI / 智能体 / 设计协作资讯</font>",
         },
         {
             "tag": "markdown",
@@ -169,10 +169,10 @@ def build_brief_card(brief: dict | None = None) -> dict:
     ]
 
     section_map = [
-        ("Agent Watch", data.get("agent_watch", []), 3),
-        ("Model Watch", data.get("model_watch", []), 2),
-        ("Design x AI", data.get("design_ai", []), 2),
-        ("快速雷达", data.get("quick_radar", []), 2),
+        ("智能体动态", data.get("agent_watch", []), 5),
+        ("模型动态", data.get("model_watch", []), 4),
+        ("设计师工作流", data.get("design_ai", []), 5),
+        ("快速雷达", data.get("quick_radar", []), 4),
     ]
     for title, entries, limit in section_map:
         if not entries:
@@ -195,7 +195,7 @@ def build_brief_card(brief: dict | None = None) -> dict:
             [
                 {"tag": "hr"},
                 {"tag": "markdown", "content": "**值得跟进**"},
-                {"tag": "markdown", "content": "\n".join(f"• {item}" for item in follow_up[:2])},
+                {"tag": "markdown", "content": "\n".join(f"• {item}" for item in follow_up[:4])},
             ]
         )
 
