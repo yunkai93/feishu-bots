@@ -16,6 +16,169 @@
   ],
   "sources": [
     {
+      "id": "openai_news",
+      "name": "OpenAI News",
+      "type": "rss",
+      "url": "https://openai.com/news/rss.xml",
+      "enabled": true,
+      "category": "model",
+      "tier": "official_feed",
+      "priority": 110,
+      "max_items": 2,
+      "freshness_hours": 120,
+      "include_keywords": [
+        "codex",
+        "gpt",
+        "chatgpt",
+        "agent",
+        "reasoning",
+        "api",
+        "model"
+      ],
+      "exclude_keywords": [
+        "academy",
+        "malta",
+        "partnership",
+        "personal finance",
+        "databricks",
+        "sea's view",
+        "sensitive conversations"
+      ]
+    },
+    {
+      "id": "google_ai_official",
+      "name": "Google AI Blog",
+      "type": "rss",
+      "url": "https://blog.google/innovation-and-ai/technology/ai/rss/",
+      "enabled": true,
+      "category": "model",
+      "tier": "official_feed",
+      "priority": 92,
+      "max_items": 2,
+      "freshness_hours": 240,
+      "include_keywords": [
+        "gemini",
+        "agent",
+        "ai mode",
+        "chrome",
+        "api",
+        "reasoning",
+        "developer"
+      ],
+      "exclude_keywords": [
+        "gardening",
+        "travel",
+        "finance",
+        "small businesses",
+        "economy forum"
+      ]
+    },
+    {
+      "id": "figma_release_notes",
+      "name": "Figma Release Notes",
+      "type": "atom",
+      "url": "https://www.figma.com/release-notes/feed/atom.xml",
+      "enabled": true,
+      "category": "design",
+      "tier": "official_feed",
+      "priority": 102,
+      "max_items": 3,
+      "freshness_hours": 336,
+      "include_keywords": [
+        "make",
+        "figjam",
+        "ai",
+        "image",
+        "draw",
+        "mcp",
+        "skills",
+        "workflow",
+        "coding agent"
+      ],
+      "exclude_keywords": [
+        "desktop",
+        "governance",
+        "table formatting"
+      ]
+    },
+    {
+      "id": "openclaw_releases",
+      "name": "OpenClaw Releases",
+      "type": "atom",
+      "url": "https://github.com/openclaw/openclaw/releases.atom",
+      "enabled": true,
+      "category": "agent",
+      "tier": "project_watch",
+      "priority": 118,
+      "max_items": 1,
+      "freshness_hours": 168,
+      "include_keywords": [
+        "codex",
+        "agent",
+        "subagent",
+        "mcp",
+        "cron",
+        "mac app",
+        "group chat",
+        "gateway",
+        "control ui"
+      ]
+    },
+    {
+      "id": "hermes_agent_releases",
+      "name": "Hermes Agent Releases",
+      "type": "atom",
+      "url": "https://github.com/NousResearch/hermes-agent/releases.atom",
+      "enabled": true,
+      "category": "agent",
+      "tier": "project_watch",
+      "priority": 116,
+      "max_items": 1,
+      "freshness_hours": 168,
+      "include_keywords": [
+        "proxy",
+        "codex",
+        "agent",
+        "computer_use",
+        "line",
+        "teams",
+        "x_search",
+        "button",
+        "browser"
+      ]
+    },
+    {
+      "id": "hyperai_cn",
+      "name": "HyperAI",
+      "type": "atom",
+      "url": "https://hyper.ai/cn/feed.xml",
+      "enabled": true,
+      "category": "ai",
+      "tier": "daily_brief",
+      "priority": 86,
+      "max_items": 2,
+      "freshness_hours": 72,
+      "include_patterns": [
+        "(openai|anthropic|qwen|deepseek|codex|claude|mcp|agent|cursor|gemini)",
+        "(智能体|大模型|编程代理|设计工作流|设计工具|figma|canva)"
+      ],
+      "exclude_keywords": [
+        "招聘",
+        "薪资",
+        "课程",
+        "论坛",
+        "论文周报",
+        "教程",
+        "高校",
+        "学者",
+        "财报",
+        "ipo",
+        "医疗",
+        "蛋白",
+        "卫星"
+      ]
+    },
+    {
       "id": "the_rundown_ai",
       "name": "The Rundown AI",
       "type": "html_json",
@@ -74,7 +237,23 @@
       "tier": "builder_brief",
       "priority": 90,
       "max_items": 5,
-      "freshness_hours": 168
+      "freshness_hours": 168,
+      "include_keywords": [
+        "codex",
+        "claude code",
+        "cursor",
+        "mcp",
+        "agent",
+        "browser",
+        "computer use",
+        "openclaw",
+        "hermes"
+      ],
+      "exclude_keywords": [
+        "tip",
+        "tips",
+        "prompt"
+      ]
     },
     {
       "id": "the_batch",
@@ -123,7 +302,18 @@
       "tier": "design_brief",
       "priority": 95,
       "max_items": 5,
-      "freshness_hours": 72
+      "freshness_hours": 72,
+      "exclude_keywords": [
+        "morgan stanley",
+        "hiring",
+        "frenemies era",
+        "brand typography",
+        "best ai art generators",
+        "signed away all of our ideas",
+        "instagram says",
+        "global design forum",
+        "art generators"
+      ]
     },
     {
       "id": "toools_design",
@@ -147,7 +337,35 @@
       "tier": "design_brief",
       "priority": 88,
       "max_items": 5,
-      "freshness_hours": 96
+      "freshness_hours": 96,
+      "include_keywords": [
+        "ai",
+        "figma",
+        "设计师",
+        "canva",
+        "claude",
+        "工作流",
+        "产品",
+        "交互",
+        "mcp",
+        "agent"
+      ],
+      "exclude_keywords": [
+        "作品集",
+        "字体",
+        "插画",
+        "配色",
+        "海报",
+        "教程合集",
+        "素材周刊",
+        "提示词库",
+        "注意力",
+        "失败100次",
+        "财报电话会",
+        "陪伴设计",
+        "印刷",
+        "一问一答"
+      ]
     }
   ]
 }

@@ -7,6 +7,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from html import unescape
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from common import STATE_DIR, dump_json, ensure_dirs, load_config, now_cst
 
@@ -30,9 +31,17 @@ def parse_dt(value: str | None) -> str | None:
         return dt.astimezone(timezone(timedelta(hours=8))).isoformat()
     except Exception:
         pass
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone(timedelta(hours=8))).isoformat()
+    except Exception:
+        pass
     for fmt in (
         "%Y-%m-%dT%H:%M:%S.%fZ",
         "%Y-%m-%dT%H:%M:%S.%f%z",
+        "%Y-%m-%dT%H:%M:%SZ",
         "%Y-%m-%dT%H:%M:%S%z",
         "%Y-%m-%d",
         "%Y/%m/%d",
@@ -99,10 +108,66 @@ def normalize_title(text: str) -> str:
 
 
 def normalize_url(url: str) -> str:
-    url = url.strip()
-    if "?" in url:
-        url = url.split("?", 1)[0]
-    return url.rstrip("/")
+    raw = url.strip()
+    if not raw:
+        return ""
+    parts = urlsplit(raw)
+    filtered_query = [
+        (key, value)
+        for key, value in parse_qsl(parts.query, keep_blank_values=True)
+        if key.lower()
+        not in {
+            "utm_source",
+            "utm_medium",
+            "utm_campaign",
+            "utm_term",
+            "utm_content",
+            "ref",
+            "ref_src",
+            "fbclid",
+            "gclid",
+            "mc_cid",
+            "mc_eid",
+        }
+    ]
+    path = parts.path.rstrip("/") or parts.path
+    query = urlencode(filtered_query, doseq=True)
+    return urlunsplit((parts.scheme, parts.netloc, path, query, ""))
+
+
+def filter_text(item: dict) -> str:
+    parts = [
+        item.get("title", ""),
+        item.get("summary", ""),
+        item.get("source_name", ""),
+        item.get("origin_site", ""),
+        item.get("url", ""),
+        " ".join(item.get("tags", [])),
+    ]
+    return clean_text(" ".join(parts)).lower()
+
+
+def matches_patterns(patterns: list[str], title: str, text: str) -> bool:
+    return any(re.search(pattern, title, re.I) or re.search(pattern, text, re.I) for pattern in patterns)
+
+
+def passes_source_filters(source: dict, item: dict) -> bool:
+    title = item.get("title", "")
+    text = filter_text(item)
+    include_keywords = [str(value).lower() for value in source.get("include_keywords", [])]
+    exclude_keywords = [str(value).lower() for value in source.get("exclude_keywords", [])]
+    include_patterns = [str(value) for value in source.get("include_patterns", [])]
+    exclude_patterns = [str(value) for value in source.get("exclude_patterns", [])]
+
+    if include_keywords and not any(keyword in text for keyword in include_keywords):
+        return False
+    if include_patterns and not matches_patterns(include_patterns, title, text):
+        return False
+    if exclude_keywords and any(keyword in text for keyword in exclude_keywords):
+        return False
+    if exclude_patterns and matches_patterns(exclude_patterns, title, text):
+        return False
+    return True
 
 
 def item_keywords(item: dict) -> str:
@@ -111,6 +176,7 @@ def item_keywords(item: dict) -> str:
         item.get("summary", ""),
         item.get("source_name", ""),
         item.get("origin_site", ""),
+        " ".join(item.get("tags", [])),
     ]
     return " ".join(parts).lower()
 
@@ -138,14 +204,66 @@ def quality_score(item: dict, preferred_entities: list[str]) -> float:
     if item.get("category") == "agent":
         if any(key in text for key in ["agent", "codex", "claude code", "cursor", "mcp", "notion", "browser", "computer use"]):
             agent_bonus = 12.0
+    platform_bonus = 0.0
+    if any(
+        key in text
+        for key in [
+            "release",
+            "release notes",
+            "available",
+            "launch",
+            "rollout",
+            "mobile",
+            "app",
+            "proxy",
+            "api",
+            "integration",
+            "mcp",
+            "workflow",
+            "whiteboard",
+            "figjam",
+            "make",
+        ]
+    ):
+        platform_bonus += 6.0
+    noise_penalty = 0.0
+    if any(
+        key in text
+        for key in [
+            "podcast",
+            "course",
+            "competition",
+            "forum",
+            "careers",
+            "hiring",
+            "job",
+            "jobs",
+            "salary",
+            "livestream",
+            "paper roundup",
+        ]
+    ):
+        noise_penalty -= 12.0
     summary_bonus = min(len(item.get("summary", "")) / 40.0, 8.0)
     tier_bonus = {
         "daily_brief": 12.0,
         "builder_brief": 9.0,
         "design_brief": 8.0,
         "deep_dive": 4.0,
+        "official_feed": 11.0,
+        "project_watch": 15.0,
     }.get(item.get("source_tier", ""), 0.0)
-    return source_priority + recency_bonus + entity_hits * 10.0 + design_bonus + agent_bonus + summary_bonus + tier_bonus
+    return (
+        source_priority
+        + recency_bonus
+        + entity_hits * 10.0
+        + design_bonus
+        + agent_bonus
+        + platform_bonus
+        + summary_bonus
+        + tier_bonus
+        + noise_penalty
+    )
 
 
 def sort_key(item: dict) -> tuple[float, float, str]:
@@ -159,7 +277,7 @@ def sort_key(item: dict) -> tuple[float, float, str]:
     return (float(item.get("quality_score", 0.0)), published_ts, item.get("title") or "")
 
 
-def enrich_item(source: dict, item: dict) -> dict:
+def enrich_item(source: dict, item: dict) -> dict | None:
     enriched = dict(item)
     enriched["title"] = normalize_title(enriched.get("title", ""))
     enriched["url"] = normalize_url(enriched.get("url", ""))
@@ -167,6 +285,10 @@ def enrich_item(source: dict, item: dict) -> dict:
     enriched["source_tier"] = source.get("tier", "")
     enriched["source_max_items"] = source.get("max_items", 0)
     enriched["freshness_hours"] = source.get("freshness_hours", 72)
+    if not enriched["title"] or not enriched["url"]:
+        return None
+    if not passes_source_filters(source, enriched):
+        return None
     return enriched
 
 
@@ -222,22 +344,77 @@ def fetch_rss(source: dict, hours: int) -> list[dict]:
         link = (item.findtext("link") or "").strip()
         pub = parse_dt(item.findtext("pubDate"))
         desc = clean_text(item.findtext("description") or "")
+        tags = [clean_text(node.text or "") for node in item.findall("category") if clean_text(node.text or "")]
         if not title or not link or not within_window(pub, int(source.get("freshness_hours", hours))):
             continue
-        items.append(
-            enrich_item(
-                source,
-                {
-                    "source_id": source["id"],
-                    "source_name": source["name"],
-                    "category": source["category"],
-                    "title": title,
-                    "url": link,
-                    "published_at": pub,
-                    "summary": desc[:320],
-                },
-            )
+        enriched = enrich_item(
+            source,
+            {
+                "source_id": source["id"],
+                "source_name": source["name"],
+                "category": source["category"],
+                "title": title,
+                "url": link,
+                "published_at": pub,
+                "summary": desc[:320],
+                "tags": tags,
+            },
         )
+        if enriched:
+            items.append(enriched)
+    return items
+
+
+def fetch_atom(source: dict, hours: int) -> list[dict]:
+    xml = fetch_text(source["url"])
+    root = ET.fromstring(xml)
+    ns = {"atom": "http://www.w3.org/2005/Atom"}
+    items: list[dict] = []
+    freshness_hours = int(source.get("freshness_hours", hours))
+    max_scan = max(int(source.get("max_items", 8)) * 3, 12)
+
+    for entry in root.findall("atom:entry", ns)[:max_scan]:
+        title = clean_text(entry.findtext("atom:title", default="", namespaces=ns))
+        link = ""
+        for node in entry.findall("atom:link", ns):
+            href = (node.attrib.get("href") or "").strip()
+            rel = (node.attrib.get("rel") or "alternate").strip()
+            if href and rel == "alternate":
+                link = href
+                break
+            if href and not link:
+                link = href
+        published = (
+            parse_dt(entry.findtext("atom:published", default=None, namespaces=ns))
+            or parse_dt(entry.findtext("atom:updated", default=None, namespaces=ns))
+        )
+        summary = clean_text(entry.findtext("atom:summary", default="", namespaces=ns))
+        if not summary:
+            summary = clean_text(entry.findtext("atom:content", default="", namespaces=ns))
+        tags = [
+            clean_text((node.attrib.get("term") or node.text or ""))
+            for node in entry.findall("atom:category", ns)
+            if clean_text((node.attrib.get("term") or node.text or ""))
+        ]
+        if not title or not link or not within_window(published, freshness_hours):
+            continue
+        enriched = enrich_item(
+            source,
+            {
+                "source_id": source["id"],
+                "source_name": source["name"],
+                "category": source["category"],
+                "title": title,
+                "url": link,
+                "published_at": published,
+                "summary": summary[:900],
+                "tags": tags,
+            },
+        )
+        if enriched:
+            items.append(enriched)
+        if len(items) >= int(source.get("max_items", 8)):
+            break
     return items
 
 
@@ -263,20 +440,20 @@ def fetch_html_json(source: dict, hours: int) -> list[dict]:
             except Exception:
                 article = ""
             desc_match = re.search(r'<meta name="description" content="([^"]+)"', article)
-            items.append(
-                enrich_item(
-                    source,
-                    {
-                        "source_id": source["id"],
-                        "source_name": source["name"],
-                        "category": source["category"],
-                        "title": title,
-                        "url": url,
-                        "published_at": pub,
-                        "summary": clean_text(desc_match.group(1))[:320] if desc_match else "",
-                    },
-                )
+            enriched = enrich_item(
+                source,
+                {
+                    "source_id": source["id"],
+                    "source_name": source["name"],
+                    "category": source["category"],
+                    "title": title,
+                    "url": url,
+                    "published_at": pub,
+                    "summary": clean_text(desc_match.group(1))[:320] if desc_match else "",
+                },
             )
+            if enriched:
+                items.append(enriched)
             if len(items) >= max_items:
                 break
         return items
@@ -300,20 +477,20 @@ def fetch_html_json(source: dict, hours: int) -> list[dict]:
             pub = parse_dt(published_match.group(1)) if published_match else None
             if not title or not within_window(pub, freshness_hours):
                 continue
-            items.append(
-                enrich_item(
-                    source,
-                    {
-                        "source_id": source["id"],
-                        "source_name": source["name"],
-                        "category": source["category"],
-                        "title": title,
-                        "url": url,
-                        "published_at": pub,
-                        "summary": clean_text(desc_match.group(1))[:320] if desc_match else "",
-                    },
-                )
+            enriched = enrich_item(
+                source,
+                {
+                    "source_id": source["id"],
+                    "source_name": source["name"],
+                    "category": source["category"],
+                    "title": title,
+                    "url": url,
+                    "published_at": pub,
+                    "summary": clean_text(desc_match.group(1))[:320] if desc_match else "",
+                },
             )
+            if enriched:
+                items.append(enriched)
             if len(items) >= max_items:
                 break
         return items
@@ -332,20 +509,20 @@ def fetch_html_json(source: dict, hours: int) -> list[dict]:
             pub = parse_dt(published_text.strip().replace(",", ""))
             if not title or not within_window(pub, freshness_hours):
                 continue
-            items.append(
-                enrich_item(
-                    source,
-                    {
-                        "source_id": source["id"],
-                        "source_name": source["name"],
-                        "category": source["category"],
-                        "title": title,
-                        "url": url,
-                        "published_at": pub,
-                        "summary": clean_text(summary)[:320],
-                    },
-                )
+            enriched = enrich_item(
+                source,
+                {
+                    "source_id": source["id"],
+                    "source_name": source["name"],
+                    "category": source["category"],
+                    "title": title,
+                    "url": url,
+                    "published_at": pub,
+                    "summary": clean_text(summary)[:320],
+                },
             )
+            if enriched:
+                items.append(enriched)
             if len(items) >= max_items:
                 break
         return items
@@ -369,20 +546,20 @@ def fetch_html_json(source: dict, hours: int) -> list[dict]:
             pub = parse_dt(published_match.group(1)) if published_match else None
             if not title or not within_window(pub, freshness_hours):
                 continue
-            items.append(
-                enrich_item(
-                    source,
-                    {
-                        "source_id": source["id"],
-                        "source_name": source["name"],
-                        "category": source["category"],
-                        "title": title,
-                        "url": url,
-                        "published_at": pub,
-                        "summary": clean_text(desc_match.group(1))[:320] if desc_match else "",
-                    },
-                )
+            enriched = enrich_item(
+                source,
+                {
+                    "source_id": source["id"],
+                    "source_name": source["name"],
+                    "category": source["category"],
+                    "title": title,
+                    "url": url,
+                    "published_at": pub,
+                    "summary": clean_text(desc_match.group(1))[:320] if desc_match else "",
+                },
             )
+            if enriched:
+                items.append(enriched)
             if len(items) >= max_items:
                 break
         return items
@@ -396,20 +573,20 @@ def fetch_html_json(source: dict, hours: int) -> list[dict]:
             pub = parse_dt(published)
             if not title or not url or not within_window(pub, freshness_hours):
                 continue
-            items.append(
-                enrich_item(
-                    source,
-                    {
-                        "source_id": source["id"],
-                        "source_name": source["name"],
-                        "category": source["category"],
-                        "title": title,
-                        "url": url,
-                        "published_at": pub,
-                        "summary": "",
-                    },
-                )
+            enriched = enrich_item(
+                source,
+                {
+                    "source_id": source["id"],
+                    "source_name": source["name"],
+                    "category": source["category"],
+                    "title": title,
+                    "url": url,
+                    "published_at": pub,
+                    "summary": "",
+                },
             )
+            if enriched:
+                items.append(enriched)
             if len(items) >= max_items:
                 break
         return items
@@ -428,20 +605,20 @@ def fetch_html_json(source: dict, hours: int) -> list[dict]:
         pub = parse_dt(published)
         if not title or not url or not within_window(pub, freshness_hours):
             continue
-        items.append(
-            enrich_item(
-                source,
-                {
-                    "source_id": source["id"],
-                    "source_name": source["name"],
-                    "category": source["category"],
-                    "title": title,
-                    "url": url,
-                    "published_at": pub,
-                    "summary": "",
-                },
-            )
+        enriched = enrich_item(
+            source,
+            {
+                "source_id": source["id"],
+                "source_name": source["name"],
+                "category": source["category"],
+                "title": title,
+                "url": url,
+                "published_at": pub,
+                "summary": "",
+            },
         )
+        if enriched:
+            items.append(enriched)
         if len(items) >= max_items:
             break
     return items
@@ -464,20 +641,20 @@ def fetch_html_card(source: dict, hours: int) -> list[dict]:
         published_at = parse_relative_cn(rel_time_clean) or parse_dt(rel_time_clean)
         if not within_window(published_at, freshness_hours):
             continue
-        items.append(
-            enrich_item(
-                source,
-                {
-                    "source_id": source["id"],
-                    "source_name": source["name"],
-                    "category": source["category"],
-                    "title": title,
-                    "url": href,
-                    "published_at": published_at or rel_time,
-                    "summary": clean_text(summary)[:320],
-                },
-            )
+        enriched = enrich_item(
+            source,
+            {
+                "source_id": source["id"],
+                "source_name": source["name"],
+                "category": source["category"],
+                "title": title,
+                "url": href,
+                "published_at": published_at or rel_time,
+                "summary": clean_text(summary)[:320],
+            },
         )
+        if enriched:
+            items.append(enriched)
         if len(items) >= max_items:
             break
     return items
@@ -492,21 +669,21 @@ def fetch_html_feed(source: dict, hours: int) -> list[dict]:
     items: list[dict] = []
     max_items = int(source.get("max_items", 8))
     for href, title, summary, source_site in pat.findall(text):
-        items.append(
-            enrich_item(
-                source,
-                {
-                    "source_id": source["id"],
-                    "source_name": source["name"],
-                    "category": source["category"],
-                    "title": title,
-                    "url": href,
-                    "published_at": None,
-                    "summary": clean_text(summary)[:320],
-                    "origin_site": clean_text(source_site),
-                },
-            )
+        enriched = enrich_item(
+            source,
+            {
+                "source_id": source["id"],
+                "source_name": source["name"],
+                "category": source["category"],
+                "title": title,
+                "url": href,
+                "published_at": None,
+                "summary": clean_text(summary)[:320],
+                "origin_site": clean_text(source_site),
+            },
         )
+        if enriched:
+            items.append(enriched)
         if len(items) >= max_items:
             break
     return items
@@ -517,6 +694,8 @@ def fetch_source(source: dict, hours: int) -> dict:
         kind = source["type"]
         if kind == "rss":
             items = fetch_rss(source, hours)
+        elif kind == "atom":
+            items = fetch_atom(source, hours)
         elif kind == "html_json":
             items = fetch_html_json(source, hours)
         elif kind == "html_card":

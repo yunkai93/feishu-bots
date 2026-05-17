@@ -57,9 +57,9 @@ def compact_digest(brief: dict | None = None) -> str:
         "",
     ]
     section_map = [
-        ("Agent Watch", data.get("agent_watch", []), 2),
-        ("Model Watch", data.get("model_watch", []), 1),
-        ("Design x AI", data.get("design_ai", []), 1),
+        ("Agent Watch", data.get("agent_watch", []), 3),
+        ("Model Watch", data.get("model_watch", []), 2),
+        ("Design x AI", data.get("design_ai", []), 2),
         ("快速雷达", data.get("quick_radar", []), 2),
     ]
     for title, entries, limit in section_map:
@@ -169,9 +169,9 @@ def build_brief_card(brief: dict | None = None) -> dict:
     ]
 
     section_map = [
-        ("Agent Watch", data.get("agent_watch", []), 2),
-        ("Model Watch", data.get("model_watch", []), 1),
-        ("Design x AI", data.get("design_ai", []), 1),
+        ("Agent Watch", data.get("agent_watch", []), 3),
+        ("Model Watch", data.get("model_watch", []), 2),
+        ("Design x AI", data.get("design_ai", []), 2),
         ("快速雷达", data.get("quick_radar", []), 2),
     ]
     for title, entries, limit in section_map:

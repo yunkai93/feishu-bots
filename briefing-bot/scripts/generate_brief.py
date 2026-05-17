@@ -44,12 +44,14 @@ def build_payload(items: list[dict]) -> str:
     prompt = PROMPT_FILE.read_text(encoding="utf-8")
     trimmed: list[dict] = []
     items = sorted(items, key=item_rank, reverse=True)
-    category_limits = {"agent": 5, "model": 4, "design": 6, "ai": 6}
+    category_limits = {"agent": 6, "model": 5, "design": 4, "ai": 5}
     used = {key: 0 for key in category_limits}
     tier_limits = {
-        "daily_brief": 10,
+        "project_watch": 4,
+        "official_feed": 5,
+        "daily_brief": 8,
         "builder_brief": 4,
-        "design_brief": 6,
+        "design_brief": 4,
         "deep_dive": 4,
     }
     tier_used = {key: 0 for key in tier_limits}
@@ -65,7 +67,7 @@ def build_payload(items: list[dict]) -> str:
         used[cat] = used.get(cat, 0) + 1
         if tier:
             tier_used[tier] = tier_used.get(tier, 0) + 1
-        if len(trimmed) >= 20:
+        if len(trimmed) >= 18:
             break
     data = {
         "run_date": now_cst().strftime("%Y-%m-%d"),
