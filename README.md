@@ -48,7 +48,6 @@ feishu-bots/
 
 - [Configuration](docs/configuration.md)
 - [Deployment](docs/deployment.md)
-- [Roadmap](docs/roadmap.md)
 - [中文文档入口](README.zh-CN.md)
 
 ## Language Switching
