@@ -6,7 +6,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from common import OUTPUT_FILE_PATH, OUTPUT_REPO_PATH, PRODUCT_ROOT, PUBLISH_BRANCH, PUBLISH_REMOTE, RENDERED_OUTPUT_FILE, TMP_DIR, ensure_dirs, now_cst
+from common import OUTPUT_FILE_PATH, OUTPUT_REMOTE_URL, PRODUCT_ROOT, PUBLISH_BRANCH, PUBLISH_REMOTE, RENDERED_OUTPUT_FILE, TMP_DIR, ensure_dirs, now_cst
 from shared.runtime import bool_env
 
 
@@ -31,11 +31,9 @@ def run_step(script: str) -> None:
 def git_publish() -> None:
     if not bool_env("BRIEFING_GIT_PUSH", True):
         return
-    if not OUTPUT_REPO_PATH.exists():
-        raise SystemExit(f"git publish failed: output repo path not found: {OUTPUT_REPO_PATH}")
-    origin = run_cmd(["git", "config", "--get", f"remote.{PUBLISH_REMOTE}.url"], cwd=OUTPUT_REPO_PATH).stdout.strip()
+    origin = OUTPUT_REMOTE_URL.strip()
     if not origin:
-        raise SystemExit(f"git publish failed: remote.{PUBLISH_REMOTE}.url not found")
+        raise SystemExit("git publish failed: BRIEFING_OUTPUT_REMOTE_URL not set")
 
     TMP_DIR.mkdir(parents=True, exist_ok=True)
 
