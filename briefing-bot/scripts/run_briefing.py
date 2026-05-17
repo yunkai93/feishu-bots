@@ -6,7 +6,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from common import OUTPUT_FILE, OUTPUT_FILE_PATH, OUTPUT_REPO_PATH, PRODUCT_ROOT, PUBLISH_BRANCH, PUBLISH_REMOTE, TMP_DIR, ensure_dirs, now_cst
+from common import OUTPUT_FILE_PATH, OUTPUT_REPO_PATH, PRODUCT_ROOT, PUBLISH_BRANCH, PUBLISH_REMOTE, RENDERED_OUTPUT_FILE, TMP_DIR, ensure_dirs, now_cst
 from shared.runtime import bool_env
 
 
@@ -46,9 +46,11 @@ def git_publish() -> None:
             cwd=PRODUCT_ROOT,
         )
 
+        if not RENDERED_OUTPUT_FILE.exists():
+            raise SystemExit(f"git publish failed: rendered output not found: {RENDERED_OUTPUT_FILE}")
         target_file = repo_dir / OUTPUT_FILE_PATH
         target_file.parent.mkdir(parents=True, exist_ok=True)
-        target_file.write_text(OUTPUT_FILE.read_text(encoding="utf-8"), encoding="utf-8")
+        target_file.write_text(RENDERED_OUTPUT_FILE.read_text(encoding="utf-8"), encoding="utf-8")
 
         run_cmd(["git", "add", OUTPUT_FILE_PATH], cwd=repo_dir)
         diff = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=str(repo_dir))

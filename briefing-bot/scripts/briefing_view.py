@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from common import OUTPUT_FILE, OUTPUT_TITLE, OUTPUT_WEB_URL, STATE_DIR, load_json, now_cst
+from common import OUTPUT_TITLE, OUTPUT_WEB_URL, RENDERED_OUTPUT_FILE, STATE_DIR, load_json, now_cst
 
 
 def load_brief() -> dict:
@@ -16,9 +16,9 @@ def latest_date(brief: dict | None = None) -> str:
 
 def latest_news_block(date: str | None = None) -> str:
     target_date = date or latest_date()
-    if not OUTPUT_FILE.exists():
+    if not RENDERED_OUTPUT_FILE.exists():
         return f"{target_date} 的 {OUTPUT_TITLE} 还没有生成。"
-    text = OUTPUT_FILE.read_text(encoding="utf-8")
+    text = RENDERED_OUTPUT_FILE.read_text(encoding="utf-8")
     marker = f"## {target_date}\n"
     start = text.find(marker)
     if start == -1:

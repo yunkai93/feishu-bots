@@ -1,5 +1,19 @@
 {
   "time_window_hours": 72,
+  "preferred_entities": [
+    "Claude Code",
+    "Codex",
+    "OpenClaw",
+    "Hermes Agent",
+    "Cursor",
+    "Gemini",
+    "OpenAI",
+    "Anthropic",
+    "Figma",
+    "Claude Design",
+    "Notion Agents",
+    "MCP"
+  ],
   "sources": [
     {
       "id": "the_rundown_ai",
@@ -7,7 +21,11 @@
       "type": "html_json",
       "url": "https://www.therundown.ai/archive",
       "enabled": true,
-      "category": "ai"
+      "category": "ai",
+      "tier": "daily_brief",
+      "priority": 100,
+      "max_items": 4,
+      "freshness_hours": 72
     },
     {
       "id": "the_neuron",
@@ -15,7 +33,11 @@
       "type": "html_json",
       "url": "https://www.theneurondaily.com/archive",
       "enabled": true,
-      "category": "ai"
+      "category": "ai",
+      "tier": "daily_brief",
+      "priority": 95,
+      "max_items": 4,
+      "freshness_hours": 72
     },
     {
       "id": "superhuman_ai",
@@ -23,17 +45,11 @@
       "type": "html_json",
       "url": "https://www.superhuman.ai/archive",
       "enabled": true,
-      "category": "ai"
-    },
-    {
-      "id": "tldr_ai",
-      "name": "TLDR AI",
-      "type": "html_list",
-      "url": "https://tldr.tech/ai/archives",
-      "enabled": true,
       "category": "ai",
-      "list_pattern": "/ai/(\\d{4}-\\d{2}-\\d{2})",
-      "title_pattern": "<a href=\"(/ai/\\d{4}-\\d{2}-\\d{2})\"><div class=\"mb-4\">([^<]+)</div></a>"
+      "tier": "daily_brief",
+      "priority": 93,
+      "max_items": 4,
+      "freshness_hours": 72
     },
     {
       "id": "futurepedia_newsletter",
@@ -42,48 +58,23 @@
       "url": "https://www.futurepedia.io/newsletter",
       "enabled": true,
       "category": "ai",
+      "tier": "daily_brief",
+      "priority": 92,
+      "max_items": 4,
+      "freshness_hours": 96,
       "item_pattern": "\"newsletterLink\":\"([^\"]+)\",\"newsletterTitle\":\"([^\"]+)\",\"publisedAtDate\":\"([^\"]+)\""
     },
     {
-      "id": "qwen_blog",
-      "name": "Qwen Blog",
+      "id": "ben_bites",
+      "name": "Ben's Bites",
       "type": "rss",
-      "url": "https://qwenlm.github.io/blog/index.xml",
+      "url": "https://www.bensbites.com/feed",
       "enabled": true,
-      "category": "model"
-    },
-    {
-      "id": "cursor_blog",
-      "name": "Cursor Blog",
-      "type": "html_list",
-      "url": "https://cursor.com/blog",
-      "enabled": false,
       "category": "agent",
-      "title_pattern": "\"title\":\"([^\"]+)\",\"href\":\"(/blog/[^\"]+)\""
-    },
-    {
-      "id": "ai_in_design",
-      "name": "AI in Design",
-      "type": "html_feed",
-      "url": "https://www.aidesignweekly.com/feed",
-      "enabled": true,
-      "category": "design"
-    },
-    {
-      "id": "toools_design",
-      "name": "TOOOLS",
-      "type": "html_json",
-      "url": "https://www.toools.design/newsletter",
-      "enabled": true,
-      "category": "design"
-    },
-    {
-      "id": "uisdc",
-      "name": "UISDC",
-      "type": "html_card",
-      "url": "https://www.uisdc.com/",
-      "enabled": true,
-      "category": "design"
+      "tier": "builder_brief",
+      "priority": 90,
+      "max_items": 5,
+      "freshness_hours": 168
     },
     {
       "id": "the_batch",
@@ -91,8 +82,72 @@
       "type": "html_json",
       "url": "https://www.deeplearning.ai/the-batch/",
       "enabled": true,
-      "category": "ai",
+      "category": "model",
+      "tier": "deep_dive",
+      "priority": 82,
+      "max_items": 2,
+      "freshness_hours": 168,
       "item_pattern": "\"title\":\"([^\"]+)\",\"slug\":\"([^\"]+)\",.*?\"published_at\":\"([^\"]+)\""
+    },
+    {
+      "id": "ahead_of_ai",
+      "name": "Ahead of AI",
+      "type": "rss",
+      "url": "https://magazine.sebastianraschka.com/feed",
+      "enabled": true,
+      "category": "model",
+      "tier": "deep_dive",
+      "priority": 78,
+      "max_items": 2,
+      "freshness_hours": 168
+    },
+    {
+      "id": "latent_space",
+      "name": "Latent Space",
+      "type": "rss",
+      "url": "https://www.latent.space/feed",
+      "enabled": true,
+      "category": "agent",
+      "tier": "deep_dive",
+      "priority": 76,
+      "max_items": 2,
+      "freshness_hours": 168
+    },
+    {
+      "id": "ai_in_design",
+      "name": "AI in Design",
+      "type": "html_feed",
+      "url": "https://www.aidesignweekly.com/feed",
+      "enabled": true,
+      "category": "design",
+      "tier": "design_brief",
+      "priority": 95,
+      "max_items": 5,
+      "freshness_hours": 72
+    },
+    {
+      "id": "toools_design",
+      "name": "TOOOLS",
+      "type": "html_json",
+      "url": "https://www.toools.design/newsletter",
+      "enabled": true,
+      "category": "design",
+      "tier": "design_brief",
+      "priority": 90,
+      "max_items": 4,
+      "freshness_hours": 168
+    },
+    {
+      "id": "uisdc",
+      "name": "UISDC",
+      "type": "html_card",
+      "url": "https://www.uisdc.com/",
+      "enabled": true,
+      "category": "design",
+      "tier": "design_brief",
+      "priority": 88,
+      "max_items": 5,
+      "freshness_hours": 96
     }
   ]
 }

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from common import OUTPUT_FILE, OUTPUT_TITLE, STATE_DIR, load_json, now_cst
+from common import OUTPUT_TITLE, RENDERED_OUTPUT_FILE, STATE_DIR, load_json, now_cst
 
 
 def bullet_entries(entries: list[dict]) -> list[str]:
@@ -68,10 +68,10 @@ def default_document() -> str:
 
 
 def update_output_file(block: str, date: str) -> None:
-    if OUTPUT_FILE.exists():
-        text = OUTPUT_FILE.read_text(encoding="utf-8")
+    if RENDERED_OUTPUT_FILE.exists():
+        text = RENDERED_OUTPUT_FILE.read_text(encoding="utf-8")
     else:
-        OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+        RENDERED_OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
         text = default_document()
 
     pattern = re.compile(rf"^## {re.escape(date)}\n.*?(?=^## |\Z)", re.S | re.M)
@@ -84,7 +84,7 @@ def update_output_file(block: str, date: str) -> None:
             new_text = f"{header}\n\n{intro}\n\n{block}{remainder}"
         else:
             new_text = text.rstrip() + "\n\n" + block
-    OUTPUT_FILE.write_text(new_text.rstrip() + "\n", encoding="utf-8")
+    RENDERED_OUTPUT_FILE.write_text(new_text.rstrip() + "\n", encoding="utf-8")
 
 
 def main() -> int:
