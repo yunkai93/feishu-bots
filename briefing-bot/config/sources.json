@@ -1,0 +1,98 @@
+{
+  "time_window_hours": 72,
+  "sources": [
+    {
+      "id": "the_rundown_ai",
+      "name": "The Rundown AI",
+      "type": "html_json",
+      "url": "https://www.therundown.ai/archive",
+      "enabled": true,
+      "category": "ai"
+    },
+    {
+      "id": "the_neuron",
+      "name": "The Neuron",
+      "type": "html_json",
+      "url": "https://www.theneurondaily.com/archive",
+      "enabled": true,
+      "category": "ai"
+    },
+    {
+      "id": "superhuman_ai",
+      "name": "Superhuman AI",
+      "type": "html_json",
+      "url": "https://www.superhuman.ai/archive",
+      "enabled": true,
+      "category": "ai"
+    },
+    {
+      "id": "tldr_ai",
+      "name": "TLDR AI",
+      "type": "html_list",
+      "url": "https://tldr.tech/ai/archives",
+      "enabled": true,
+      "category": "ai",
+      "list_pattern": "/ai/(\\d{4}-\\d{2}-\\d{2})",
+      "title_pattern": "<a href=\"(/ai/\\d{4}-\\d{2}-\\d{2})\"><div class=\"mb-4\">([^<]+)</div></a>"
+    },
+    {
+      "id": "futurepedia_newsletter",
+      "name": "Futurepedia Newsletter",
+      "type": "html_json",
+      "url": "https://www.futurepedia.io/newsletter",
+      "enabled": true,
+      "category": "ai",
+      "item_pattern": "\"newsletterLink\":\"([^\"]+)\",\"newsletterTitle\":\"([^\"]+)\",\"publisedAtDate\":\"([^\"]+)\""
+    },
+    {
+      "id": "qwen_blog",
+      "name": "Qwen Blog",
+      "type": "rss",
+      "url": "https://qwenlm.github.io/blog/index.xml",
+      "enabled": true,
+      "category": "model"
+    },
+    {
+      "id": "cursor_blog",
+      "name": "Cursor Blog",
+      "type": "html_list",
+      "url": "https://cursor.com/blog",
+      "enabled": false,
+      "category": "agent",
+      "title_pattern": "\"title\":\"([^\"]+)\",\"href\":\"(/blog/[^\"]+)\""
+    },
+    {
+      "id": "ai_in_design",
+      "name": "AI in Design",
+      "type": "html_feed",
+      "url": "https://www.aidesignweekly.com/feed",
+      "enabled": true,
+      "category": "design"
+    },
+    {
+      "id": "toools_design",
+      "name": "TOOOLS",
+      "type": "html_json",
+      "url": "https://www.toools.design/newsletter",
+      "enabled": true,
+      "category": "design"
+    },
+    {
+      "id": "uisdc",
+      "name": "UISDC",
+      "type": "html_card",
+      "url": "https://www.uisdc.com/",
+      "enabled": true,
+      "category": "design"
+    },
+    {
+      "id": "the_batch",
+      "name": "The Batch",
+      "type": "html_json",
+      "url": "https://www.deeplearning.ai/the-batch/",
+      "enabled": true,
+      "category": "ai",
+      "item_pattern": "\"title\":\"([^\"]+)\",\"slug\":\"([^\"]+)\",.*?\"published_at\":\"([^\"]+)\""
+    }
+  ]
+}

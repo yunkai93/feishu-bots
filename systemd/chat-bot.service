@@ -1,0 +1,17 @@
+[Unit]
+Description=feishu-bots chat reply service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/feishu-bots
+ExecStart=/opt/feishu-bots/.venv/bin/python /opt/feishu-bots/chat-bot/scripts/feishu_reply.py
+Restart=always
+RestartSec=5
+User=feishu-bots
+Environment=HOME=/opt/feishu-bots
+Environment=PATH=/opt/feishu-bots/.venv/bin:/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=multi-user.target

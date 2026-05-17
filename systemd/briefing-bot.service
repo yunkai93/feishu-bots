@@ -1,0 +1,12 @@
+[Unit]
+Description=feishu-bots briefing generator
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/feishu-bots
+ExecStart=/opt/feishu-bots/.venv/bin/python /opt/feishu-bots/briefing-bot/scripts/run_briefing.py
+User=feishu-bots
+Environment=HOME=/opt/feishu-bots
+Environment=PATH=/opt/feishu-bots/.venv/bin:/usr/local/bin:/usr/bin:/bin

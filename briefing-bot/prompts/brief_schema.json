@@ -1,0 +1,57 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "date": { "type": "string" },
+    "updated_at": { "type": "string" },
+    "today_take": { "type": "string" },
+    "agent_watch": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    },
+    "model_watch": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    },
+    "design_ai": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    },
+    "quick_radar": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    },
+    "follow_up": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "sources_used": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "required": [
+    "date",
+    "updated_at",
+    "today_take",
+    "agent_watch",
+    "model_watch",
+    "design_ai",
+    "quick_radar",
+    "follow_up",
+    "sources_used"
+  ],
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "source": { "type": "string" },
+        "url": { "type": "string" }
+      },
+      "required": ["title", "summary", "source", "url"]
+    }
+  }
+}
