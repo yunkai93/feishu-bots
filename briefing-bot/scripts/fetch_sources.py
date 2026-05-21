@@ -5,14 +5,18 @@ import json
 import re
 import urllib.request
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from html import unescape
+from time import perf_counter
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from common import STATE_DIR, dump_json, ensure_dirs, load_config, now_cst
 
 
 UA = "Mozilla/5.0 (compatible; feishu-bots-briefing/1.0; +https://github.com/)"
+MAX_FETCH_WORKERS = 8
+PARALLEL_FETCH_TYPES = {"rss", "atom"}
 
 
 def fetch_text(url: str) -> str:
@@ -881,6 +885,7 @@ def fetch_uisdc_news(source: dict, hours: int) -> list[dict]:
 
 
 def fetch_source(source: dict, hours: int) -> dict:
+    started = perf_counter()
     try:
         kind = source["type"]
         if kind == "rss":
@@ -897,9 +902,66 @@ def fetch_source(source: dict, hours: int) -> dict:
             items = fetch_uisdc_news(source, hours)
         else:
             raise ValueError(f"unsupported source type: {kind}")
-        return {"source": source["name"], "ok": True, "count": len(items), "items": items}
+        return {
+            "source": source["name"],
+            "ok": True,
+            "count": len(items),
+            "items": items,
+            "elapsed_ms": int((perf_counter() - started) * 1000),
+        }
     except Exception as exc:
-        return {"source": source["name"], "ok": False, "error": str(exc), "items": []}
+        return {
+            "source": source["name"],
+            "ok": False,
+            "error": str(exc),
+            "items": [],
+            "elapsed_ms": int((perf_counter() - started) * 1000),
+        }
+
+
+def fetch_all_sources(sources: list[dict], hours: int) -> list[dict]:
+    enabled_sources = [src for src in sources if src.get("enabled", True)]
+    if len(enabled_sources) <= 1:
+        return [fetch_source(src, hours) for src in enabled_sources]
+
+    results: list[dict | None] = [None] * len(enabled_sources)
+    parallel_sources = [
+        (idx, source)
+        for idx, source in enumerate(enabled_sources)
+        if source.get("type") in PARALLEL_FETCH_TYPES
+    ]
+
+    workers = min(MAX_FETCH_WORKERS, len(parallel_sources))
+    if workers > 0:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            future_map = {
+                executor.submit(fetch_source, source, hours): idx
+                for idx, source in parallel_sources
+            }
+
+            # Keep HTML-style sources serial to avoid piling requests onto brittle sites.
+            for idx, source in enumerate(enabled_sources):
+                if source.get("type") in PARALLEL_FETCH_TYPES:
+                    continue
+                results[idx] = fetch_source(source, hours)
+
+            for future in as_completed(future_map):
+                idx = future_map[future]
+                try:
+                    results[idx] = future.result()
+                except Exception as exc:
+                    source = enabled_sources[idx]
+                    results[idx] = {
+                        "source": source["name"],
+                        "ok": False,
+                        "error": str(exc),
+                        "items": [],
+                        "elapsed_ms": 0,
+                    }
+    else:
+        for idx, source in enumerate(enabled_sources):
+            results[idx] = fetch_source(source, hours)
+    return [result for result in results if result is not None]
 
 
 def main() -> int:
@@ -907,17 +969,37 @@ def main() -> int:
     cfg = load_config()
     hours = int(cfg.get("time_window_hours", 72))
     preferred_entities = list(cfg.get("preferred_entities", []))
-    results = [fetch_source(src, hours) for src in cfg["sources"] if src.get("enabled", True)]
+    started = perf_counter()
+    results = fetch_all_sources(cfg["sources"], hours)
     raw_items = [item for result in results for item in result["items"]]
     deduped = dedupe_items(raw_items, preferred_entities)
     final_items = limit_per_source(deduped)
+    total_elapsed_ms = int((perf_counter() - started) * 1000)
     out = {
         "generated_at": now_cst().isoformat(),
         "results": results,
         "items": final_items,
+        "summary": {
+            "sources": len(results),
+            "sources_ok": sum(1 for result in results if result.get("ok")),
+            "sources_failed": sum(1 for result in results if not result.get("ok")),
+            "raw_items": len(raw_items),
+            "final_items": len(final_items),
+            "elapsed_ms": total_elapsed_ms,
+        },
     }
     dump_json(STATE_DIR / "fetched.json", out)
-    print(json.dumps({"sources": len(results), "items": len(final_items)}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                "sources": len(results),
+                "sources_failed": sum(1 for result in results if not result.get("ok")),
+                "items": len(final_items),
+                "elapsed_ms": total_elapsed_ms,
+            },
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

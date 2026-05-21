@@ -7,7 +7,7 @@ Copy the root `.env.example` to `.env` and set:
 - `FEISHU_APP_ID`
 - `FEISHU_APP_SECRET`
 - `FEISHU_CHAT_ID`
-- `BRIEFING_OUTPUT_REPO_PATH`
+- `BRIEFING_OUTPUT_REMOTE_URL`
 - `BRIEFING_OUTPUT_FILE_PATH`
 - `BRIEFING_OUTPUT_TITLE`
 - `BRIEFING_OUTPUT_WEB_URL`
@@ -16,7 +16,7 @@ Copy the root `.env.example` to `.env` and set:
 - `BRIEFING_GIT_PUSH`
 - `CHAT_BOT_SANDBOX_DIR`
 
-`briefing-bot` writes the generated markdown to the configured output repository and file path.
+`briefing-bot` pushes the generated markdown to the configured Git remote and writes it to the target file path.
 
 `chat-bot` stores per-user sessions and logs under its own runtime directories and uses a read-only Codex sandbox for Q&A.
 
