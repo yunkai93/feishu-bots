@@ -48,6 +48,7 @@ feishu-bots/
 
 - [配置说明](docs/configuration.zh-CN.md)
 - [部署说明](docs/deployment.zh-CN.md)
+- [运维操作](docs/ops.zh-CN.md)
 - [English Docs](README.md)
 
 ## 文档语言切换

@@ -4,3 +4,4 @@
 
 - [Configuration](configuration.md)
 - [Deployment](deployment.md)
+- [Operations](ops.md)

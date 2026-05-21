@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CHAT_SERVICE="chat-bot.service"
+BRIEFING_SERVICE="briefing-bot.service"
+BRIEFING_TIMER="briefing-bot.timer"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ./svc on all|chat|brief
+  ./svc off all|chat|brief
+  ./svc status all|chat|brief
+  ./svc run-brief
+EOF
+}
+
+need_sudo() {
+  if [[ "${EUID}" -ne 0 ]]; then
+    sudo "$@"
+  else
+    "$@"
+  fi
+}
+
+normalize_target() {
+  case "${1:-all}" in
+    all|chat|brief)
+      printf '%s\n' "${1:-all}"
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+cmd_on() {
+  case "$(normalize_target "${1:-all}")" in
+    all)
+      need_sudo systemctl enable --now "${CHAT_SERVICE}" "${BRIEFING_TIMER}"
+      ;;
+    chat)
+      need_sudo systemctl enable --now "${CHAT_SERVICE}"
+      ;;
+    brief)
+      need_sudo systemctl enable --now "${BRIEFING_TIMER}"
+      ;;
+  esac
+}
+
+cmd_off() {
+  case "$(normalize_target "${1:-all}")" in
+    all)
+      need_sudo systemctl stop "${CHAT_SERVICE}" "${BRIEFING_TIMER}" "${BRIEFING_SERVICE}"
+      need_sudo systemctl disable "${CHAT_SERVICE}" "${BRIEFING_TIMER}"
+      ;;
+    chat)
+      need_sudo systemctl stop "${CHAT_SERVICE}"
+      need_sudo systemctl disable "${CHAT_SERVICE}"
+      ;;
+    brief)
+      need_sudo systemctl stop "${BRIEFING_TIMER}" "${BRIEFING_SERVICE}"
+      need_sudo systemctl disable "${BRIEFING_TIMER}"
+      ;;
+  esac
+}
+
+cmd_status() {
+  case "$(normalize_target "${1:-all}")" in
+    all)
+      systemctl list-unit-files "${CHAT_SERVICE}" "${BRIEFING_SERVICE}" "${BRIEFING_TIMER}"
+      echo
+      systemctl list-units --all "${CHAT_SERVICE}" "${BRIEFING_SERVICE}" "${BRIEFING_TIMER}"
+      ;;
+    chat)
+      systemctl list-unit-files "${CHAT_SERVICE}"
+      echo
+      systemctl list-units --all "${CHAT_SERVICE}"
+      ;;
+    brief)
+      systemctl list-unit-files "${BRIEFING_SERVICE}" "${BRIEFING_TIMER}"
+      echo
+      systemctl list-units --all "${BRIEFING_SERVICE}" "${BRIEFING_TIMER}"
+      ;;
+  esac
+}
+
+cmd_brief() {
+  need_sudo systemctl start "${BRIEFING_SERVICE}"
+}
+
+main() {
+  case "${1:-}" in
+    on)
+      cmd_on "${2:-all}"
+      ;;
+    off)
+      cmd_off "${2:-all}"
+      ;;
+    status)
+      cmd_status "${2:-all}"
+      ;;
+    run-brief)
+      cmd_brief
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"
